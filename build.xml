@@ -1,0 +1,47 @@
+<project name="rwmidi" default="dist" basedir=".">
+	<description>
+		rwmidi ant build file
+	</description>
+
+	<!-- set global properties for this build -->
+	<property name="source" location="./src"/>
+  <property name="build" location="./build"/>
+  <property name="dist"  location="./jar"/>
+  <property name="dist2"  location="./distribution"/>
+
+	<target name="clean">
+		<delete dir="${dist}"/>
+		<delete dir="${dist2}"/>
+		<delete dir="${build}"/>
+	</target>
+  
+  <target name="init">
+    <!-- Create the time stamp -->
+		<tstamp/>
+		<mkdir dir="${build}"/>
+		<mkdir dir="${build}/rwmidi"/>
+		<mkdir dir="${build}/rwdoclet"/>
+	</target>
+
+	<target name="compile_rwmidi" depends="init" description="compile the source " >
+	    <javac srcdir="${source}/rwmidi" destdir="${build}/rwmidi" source="1.5" />
+	</target>
+	
+	<target name="compile_rwdoclet" depends="init" description="compile the rwdoclet source " >
+		<javac srcdir="${source}/rwdoclet" destdir="${build}/rwdoclet" source="1.5" />
+		<!-- Put everything in ${build} into the MyProject-${DSTAMP}.jar file -->
+		<jar jarfile="${build}/rwdoclet/rwdoclet.jar" basedir="${build}/rwdoclet"/>
+	</target>
+
+
+  <target name="dist" depends="compile_rwmidi,compile_rwdoclet" description="generate the distribution" >
+    <!-- Create the distribution directory -->
+		<mkdir dir="${dist}"/>
+		<!-- Put everything in ${build} into the MyProject-${DSTAMP}.jar file -->
+		<jar jarfile="${dist}/rwmidi.jar" basedir="${build}/rwmidi"/>
+		<exec executable="sh">
+			<arg line="doc.sh"/>
+		</exec>
+  </target>
+
+</project>
