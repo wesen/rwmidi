@@ -37,7 +37,7 @@ public class MidiOutput {
 	 * @param velocity Note velocity
 	 * @return 1 on success, 0 on error
 	 */
-	public int sendNoteOn(int channel, int note, int velocity) {
+	public synchronized int sendNoteOn(int channel, int note, int velocity) {
 		ShortMessage msg = new ShortMessage();
 		try {
 			msg.setMessage(MidiEvent.NOTE_ON, channel, note, velocity);
@@ -57,7 +57,7 @@ public class MidiOutput {
 	 * @param velocity Note velocity
 	 * @return 1 on success, 0 on error
 	 */
-	public int sendNoteOff(int channel, int note, int velocity) {
+	public synchronized int sendNoteOff(int channel, int note, int velocity) {
 		ShortMessage msg = new ShortMessage();
 		try {
 			msg.setMessage(MidiEvent.NOTE_OFF, channel, note, velocity);
@@ -77,7 +77,7 @@ public class MidiOutput {
 	 * @param value Controller Change value
 	 * @return 1 on success, 0 on error
 	 */
-	public int sendController(int channel, int cc, int value) {
+	public synchronized int sendController(int channel, int cc, int value) {
 		ShortMessage msg = new ShortMessage();
 		try {
 			msg.setMessage(MidiEvent.CONTROL_CHANGE, channel, cc, value);
@@ -96,7 +96,7 @@ public class MidiOutput {
 	 * @param value Program Change value
 	 * @return 1 on success, 0 on error
 	 */
-	public int sendProgramChange(int value) {
+	public synchronized int sendProgramChange(int value) {
 		ShortMessage msg = new ShortMessage();
 		try {
 			msg.setMessage(MidiEvent.PROGRAM_CHANGE, value, -1);
@@ -114,7 +114,7 @@ public class MidiOutput {
 	 * @param msg Bytes of the sysex message, have to contain 0xF0 at the beginning and 0xF7 at the end
 	 * @return 1 on success, 0 on error
 	 */
-	public int sendSysex(byte [] msg) {
+	public synchronized int sendSysex(byte [] msg) {
 		javax.sound.midi.SysexMessage msg2 = new javax.sound.midi.SysexMessage();
 		try {
 			msg2.setMessage(msg, msg.length);
