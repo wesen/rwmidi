@@ -1,6 +1,9 @@
 package rwmidi;
 
 import java.util.ArrayList;
+import java.util.List;
+
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.MidiMessage;
@@ -20,7 +23,8 @@ import javax.sound.midi.Transmitter;
 public class MidiInput implements Receiver {
 	
 	javax.sound.midi.MidiDevice jDevice;
-	ArrayList<Plug> plugList;
+    final List currentMessage = new ArrayList();
+    final List<Plug> plugList = new CopyOnWriteArrayList<Plug>();
 
 	/**
 	 * Create a MidiInput from a javax.sound.midi.MidiDevice . Don't use this unless you know what you are doing.
@@ -32,8 +36,6 @@ public class MidiInput implements Receiver {
 		dev2.open();
 		Transmitter trsmt = dev2.getTransmitter();
 		trsmt.setReceiver(this);
-		plugList = new ArrayList<Plug>();
-		currentMessage = new ArrayList();
 		System.out.println("Foo");
 	}
 	
@@ -59,8 +61,6 @@ public class MidiInput implements Receiver {
 	public void close() {
 		plugList.clear();
 	}
-
-	ArrayList currentMessage;
 	
 	public static void printHex(byte[] b) {
 		printHex(b, 0, b.length);
