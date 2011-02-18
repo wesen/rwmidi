@@ -16,9 +16,14 @@ public class MidiOutput {
 	
 	MidiOutput(javax.sound.midi.MidiDevice device) throws MidiUnavailableException {
 		this.device = device;
-		device.open();
+		if (!device.isOpen())
+			device.open();
 		receiver = device.getReceiver();
 
+	}
+	
+	MidiOutput(Receiver _receiver) {
+		receiver = _receiver;
 	}
 
 	MidiOutput(MidiOutputDevice _device) throws MidiUnavailableException {
@@ -29,6 +34,7 @@ public class MidiOutput {
 		javax.sound.midi.MidiDevice.Info info = device.getDeviceInfo();
 		return info.getName() + " " + info.getVendor();
 	}
+	
 
 	/**
 	 * Send a NOTE ON message on this output.

@@ -16,7 +16,7 @@ public class MidiEvent extends ShortMessage{
 	public static final int NOTE_OFF = 0x80;
 	public static final int NOTE_ON = 0x90;
 	public static final int CONTROL_CHANGE = 0xB0;
-	public static final int PROGRAM_CHANGE = 0xC0;
+	
 	private int midiChannel = 0;
 	
 	MidiInput input = null;
@@ -86,6 +86,7 @@ public class MidiEvent extends ShortMessage{
 		else if (msg instanceof ShortMessage) {
 			ShortMessage smsg = (ShortMessage)msg;
 			final int midiCommand = smsg.getCommand();
+			final int sysMessage = smsg.getStatus();
 			final int midiChannel = smsg.getChannel();
 			final int midiData1 = smsg.getData1();
 			final int midiData2 = smsg.getData2();
@@ -98,6 +99,8 @@ public class MidiEvent extends ShortMessage{
 				return new Controller(midiChannel, midiData1, midiData2);
 			} else if (midiCommand == MidiEvent.PROGRAM_CHANGE) {
 				return new ProgramChange(midiData1);
+			} else if (sysMessage >= MidiEvent.SONG_POSITION_POINTER) { //if we get this far, only syncs are left
+				return new SyncEvent(msg);
 			}
 		}
 		return null;
