@@ -16,6 +16,7 @@ public class MidiEvent extends ShortMessage{
 	public static final int NOTE_OFF = 0x80;
 	public static final int NOTE_ON = 0x90;
 	public static final int CONTROL_CHANGE = 0xB0;
+	public static final int PITCH_BEND = 0xE0;
 	
 	private int midiChannel = 0;
 	
