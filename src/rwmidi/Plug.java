@@ -1,7 +1,6 @@
 package rwmidi;
 
 import java.lang.reflect.Method;
-
 import javax.sound.midi.MidiMessage;
 import javax.sound.midi.ShortMessage;
 
@@ -69,8 +68,8 @@ class Plug{
 		throw new RuntimeException("Error on plug: >" +methodName + "< Invalid argument class");
 	}
 
-	void callPlug(MidiInput _input, final MidiMessage msg){
-		try{
+	void callPlug(rwmidi.MidiInput _input, final MidiMessage msg){
+		try {
 			if ((msg.getStatus() & 0xF0) != getStatus() && getStatus() != -1)
 				return;
 			if (msg instanceof ShortMessage) {
@@ -78,11 +77,11 @@ class Plug{
 				if (smsg.getChannel() != channel && channel != -1)
 					return;
 			}
-			MidiEvent event = null;
-			if (msg instanceof MidiEvent) {
-				event = (MidiEvent)msg;
+			rwmidi.MidiEvent event = null;
+			if (msg instanceof rwmidi.MidiEvent) {
+				event = (rwmidi.MidiEvent)msg;
 			} else {
-				event = MidiEvent.create(msg);
+				event = rwmidi.MidiEvent.create(msg);
 			}
 
 			if (event != null) {
