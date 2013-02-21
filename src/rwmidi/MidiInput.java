@@ -39,8 +39,6 @@ public class MidiInput implements Receiver {
 			dev2.open();
 		Transmitter trsmt = dev2.getTransmitter();
 		trsmt.setReceiver(this);
-		plugList = new CopyOnWriteArrayList<Plug>();
-		currentMessage = new ArrayList();
 	}
 
 	protected MidiInput(MidiInputDevice _device) throws MidiUnavailableException {
