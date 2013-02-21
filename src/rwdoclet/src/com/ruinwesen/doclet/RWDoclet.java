@@ -3,12 +3,17 @@ package com.ruinwesen.doclet;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.regex.*;
-
-import com.sun.javadoc.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import com.sun.javadoc.ClassDoc;
+import com.sun.javadoc.ConstructorDoc;
+import com.sun.javadoc.ExecutableMemberDoc;
+import com.sun.javadoc.MethodDoc;
+import com.sun.javadoc.Parameter;
+import com.sun.javadoc.RootDoc;
+import com.sun.javadoc.Tag;
 
 public class RWDoclet {
 	static String outputDir = "/Users/manuel/javadoc-output/";
