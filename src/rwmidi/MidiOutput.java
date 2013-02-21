@@ -13,12 +13,19 @@ import javax.sound.midi.ShortMessage;
 public class MidiOutput {
 	Receiver receiver;
 	javax.sound.midi.MidiDevice device;
+	static final int MAXPITCHBEND = 16383;
+	static final int MINPITCHBEND = 0;
 	
 	MidiOutput(javax.sound.midi.MidiDevice device) throws MidiUnavailableException {
 		this.device = device;
-		device.open();
+		if (!device.isOpen())
+			device.open();
 		receiver = device.getReceiver();
 
+	}
+	
+	MidiOutput(Receiver _receiver) {
+		receiver = _receiver;
 	}
 
 	MidiOutput(MidiOutputDevice _device) throws MidiUnavailableException {
@@ -29,6 +36,7 @@ public class MidiOutput {
 		javax.sound.midi.MidiDevice.Info info = device.getDeviceInfo();
 		return info.getName() + " " + info.getVendor();
 	}
+	
 
 	/**
 	 * Send a NOTE ON message on this output.
@@ -37,7 +45,7 @@ public class MidiOutput {
 	 * @param velocity Note velocity
 	 * @return 1 on success, 0 on error
 	 */
-	public int sendNoteOn(int channel, int note, int velocity) {
+	public synchronized int sendNoteOn(int channel, int note, int velocity) {
 		ShortMessage msg = new ShortMessage();
 		try {
 			msg.setMessage(MidiEvent.NOTE_ON, channel, note, velocity);
@@ -57,7 +65,7 @@ public class MidiOutput {
 	 * @param velocity Note velocity
 	 * @return 1 on success, 0 on error
 	 */
-	public int sendNoteOff(int channel, int note, int velocity) {
+	public synchronized int sendNoteOff(int channel, int note, int velocity) {
 		ShortMessage msg = new ShortMessage();
 		try {
 			msg.setMessage(MidiEvent.NOTE_OFF, channel, note, velocity);
@@ -77,10 +85,34 @@ public class MidiOutput {
 	 * @param value Controller Change value
 	 * @return 1 on success, 0 on error
 	 */
-	public int sendController(int channel, int cc, int value) {
+	public synchronized int sendController(int channel, int cc, int value) {
 		ShortMessage msg = new ShortMessage();
 		try {
 			msg.setMessage(MidiEvent.CONTROL_CHANGE, channel, cc, value);
+			receiver.send(msg, -1);
+			return 1;
+		} catch (InvalidMidiDataException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return 0;
+		}
+	}
+	
+	/**
+	 * Send a Pitch Bend change message on this output.
+	 * @param channel Channel on which to send the message
+	 * @param value Pitch Bend value
+	 * @return 1 on success, 0 on error
+	 */
+	public int sendPitchBend(int channel, int value) {
+		if (value > MAXPITCHBEND) value = MAXPITCHBEND;
+		if (value < MINPITCHBEND) value = MINPITCHBEND;
+		byte lsb = (byte) (value % 128);
+		byte msb = (byte) (value/128);
+		
+		ShortMessage msg = new ShortMessage();
+		try {
+			msg.setMessage(MidiEvent.PITCH_BEND, channel, lsb, msb);
 			receiver.send(msg, -1);
 			return 1;
 		} catch (InvalidMidiDataException e) {
@@ -96,7 +128,7 @@ public class MidiOutput {
 	 * @param value Program Change value
 	 * @return 1 on success, 0 on error
 	 */
-	public int sendProgramChange(int value) {
+	public synchronized int sendProgramChange(int value) {
 		ShortMessage msg = new ShortMessage();
 		try {
 			msg.setMessage(MidiEvent.PROGRAM_CHANGE, value, -1);
@@ -114,7 +146,7 @@ public class MidiOutput {
 	 * @param msg Bytes of the sysex message, have to contain 0xF0 at the beginning and 0xF7 at the end
 	 * @return 1 on success, 0 on error
 	 */
-	public int sendSysex(byte [] msg) {
+	public synchronized int sendSysex(byte [] msg) {
 		javax.sound.midi.SysexMessage msg2 = new javax.sound.midi.SysexMessage();
 		try {
 			msg2.setMessage(msg, msg.length);

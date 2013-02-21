@@ -1,14 +1,15 @@
 package rwmidi;
 
+import java.util.List;
 import java.util.ArrayList;
+
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.MidiMessage;
-import javax.sound.midi.MidiSystem;
 import javax.sound.midi.MidiUnavailableException;
 import javax.sound.midi.Receiver;
-import javax.sound.midi.ShortMessage;
-import javax.sound.midi.SysexMessage;
 import javax.sound.midi.Transmitter;
 
 /**
@@ -18,9 +19,14 @@ import javax.sound.midi.Transmitter;
  * to close the corresponding MidiDevice (however, this will close all MidiInputs connected to this device). 
  */
 public class MidiInput implements Receiver {
-	
+
 	javax.sound.midi.MidiDevice jDevice;
-	ArrayList<Plug> plugList;
+    final List currentMessage = new ArrayList();
+    final List<Plug> plugList = new CopyOnWriteArrayList<Plug>();
+	int divisions = 0;
+	long pulseOne = 0;
+	long pulseTwo = 0;
+	long pulseTime;
 
 	/**
 	 * Create a MidiInput from a javax.sound.midi.MidiDevice . Don't use this unless you know what you are doing.
@@ -29,18 +35,16 @@ public class MidiInput implements Receiver {
 	 */
 	public MidiInput(javax.sound.midi.MidiDevice dev2) throws MidiUnavailableException {
 		this.jDevice = dev2;
-		dev2.open();
+		if (!dev2.isOpen())
+			dev2.open();
 		Transmitter trsmt = dev2.getTransmitter();
 		trsmt.setReceiver(this);
-		plugList = new ArrayList<Plug>();
-		currentMessage = new ArrayList();
-		System.out.println("Foo");
 	}
-	
+
 	protected MidiInput(MidiInputDevice _device) throws MidiUnavailableException {
 		this(_device.getDevice());
 	}
-	
+
 	public String getName() {
 		javax.sound.midi.MidiDevice.Info info = jDevice.getDeviceInfo();
 		return info.getName() + " " + info.getVendor();
@@ -60,8 +64,6 @@ public class MidiInput implements Receiver {
 		plugList.clear();
 	}
 
-	ArrayList currentMessage;
-	
 	public static void printHex(byte[] b) {
 		printHex(b, 0, b.length);
 	}
@@ -90,53 +92,85 @@ public class MidiInput implements Receiver {
 		}
 		System.out.println();
 	}
-	
 
-	public void send(final MidiMessage message, final long timeStamp) {
-					if ((message.getLength() > 1)) {
-						System.out.println("message " + message);
-			printHex(message.getMessage());
-		}
-		if (message instanceof javax.sound.midi.SysexMessage || message.getStatus() == (byte)0xF7) {
-			if (message.getStatus() == 0xF0) {
-//				System.out.println("clear message and start new ");
-				currentMessage.clear(); // no shortcut for sysex messages
-				currentMessage.add((byte)0xF0);
-			}
-			for (byte b : ((javax.sound.midi.SysexMessage)message).getData()) {
-				if (b == (byte)0xF7) {
-					currentMessage.add((byte)0xF7);
-					byte msg[] = new byte[currentMessage.size()];
-					for (int i = 0; i < currentMessage.size(); i++) {
-						msg[i] = ((Byte)currentMessage.get(i)).byteValue();
-					}
-					javax.sound.midi.SysexMessage newMsg = new javax.sound.midi.SysexMessage();
-					try {
-						newMsg.setMessage(msg, msg.length);
-						for (Plug plug : plugList)
-							plug.callPlug(this, newMsg);
-					} catch (InvalidMidiDataException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				} else {
-					currentMessage.add(b);
+	private void addSysexBytes(byte bytes[]) {
+		for (byte b : bytes) {
+			if (b == (byte)0xF7) {
+				currentMessage.add((byte)0xF7);
+				byte msg[] = new byte[currentMessage.size()];
+				for (int i = 0; i < currentMessage.size(); i++) {
+					msg[i] = ((Byte)currentMessage.get(i)).byteValue();
 				}
-			}
-		} else {
-			if (message.getStatus() >= 0xF8) {
-				return;
+				javax.sound.midi.SysexMessage newMsg = new javax.sound.midi.SysexMessage();
+				try {
+					newMsg.setMessage(msg, msg.length);
+					for (Plug plug : plugList)
+						plug.callPlug(this, newMsg);
+				} catch (InvalidMidiDataException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			} else {
-//				System.out.println("clear current message " + Integer.toHexString((byte)message.getStatus()));
-				currentMessage.clear(); // discard maybe sysex message
+				currentMessage.add(b);
 			}
-//			System.out.println("received message ");
-//			printHex(message.getMessage());
-			for (Plug plug : plugList) 
-				plug.callPlug(this, message);
 		}
 	}
 
+	public void send(final MidiMessage message, final long timeStamp) {
+		//		if ((message.getLength() >= 1)) {
+		//			System.out.println("message " + message);
+		//			printHex(message.getMessage());
+		//		}
+		if (message instanceof javax.sound.midi.SysexMessage || message.getStatus() == (byte)0xF7) {
+			if (message.getStatus() == 0xF0) {
+				//				System.out.println("clear message and start new ");
+				currentMessage.clear(); // no shortcut for sysex messages
+				currentMessage.add((byte)0xF0);
+			}
+			addSysexBytes(((javax.sound.midi.SysexMessage)message).getData());
+			///
+		} else {
+			//commenting out to enable midi sync messages
+			//			if (message.getStatus() >= 0xF8) {
+			//				return;
+			//			} else {
+			if (message.getStatus() == 0xF7) {
+				addSysexBytes(message.getMessage());
+				return;
+			}
+			//			}
+			for (Plug plug : plugList) 
+				plug.callPlug(this, message);
+			if (message.getStatus() == SyncEvent.TIMING_CLOCK && divisions != 0){
+				calculatePulseSpace();
+				for (int i = 1; i < divisions; i++){
+					if (pulseTime > 5){
+						try {
+							Thread.sleep(pulseTime);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+					for (Plug plug : plugList) 
+						plug.callPlug(this, message);
+				}
+			}
+			if (message.getStatus() == SyncEvent.STOP && divisions != 0){
+				pulseOne = 0;
+				pulseTwo = 0;
+				pulseTime = 0;
+			}
+		}
+	}
+
+	private void calculatePulseSpace(){
+		pulseOne = System.nanoTime();
+		if(pulseTwo != 0){
+			pulseTime = TimeUnit.MILLISECONDS.convert((pulseOne - pulseTwo) / divisions, TimeUnit.NANOSECONDS);
+		}
+		pulseTwo = pulseOne;
+	}
 	/**
 	 * Register a callback method on a specific channel for a specific MIDI command. The value field is the MIDI status byte, 
 	 * for example 0x90 for NOTE ON.
@@ -146,15 +180,15 @@ public class MidiInput implements Receiver {
 	 * @param value MIDI status byte, -1 for all messages
 	 */
 	public void plug(final Object _object, 
-			  final String _methodName,
-			  final int channel,
-			  final int value) {
+			final String _methodName,
+			final int channel,
+			final int value) {
 		if (Plug.objectHasMethod(_object, _methodName)) {
 			Plug plug = new Plug(_object, _methodName, channel, value);
 			plugList.add(plug);
 		}
 	}
-	
+
 	/**
 	 * Register a callback method for all MIDI messages received on this input.
 	 * @param object Callback object
@@ -165,7 +199,7 @@ public class MidiInput implements Receiver {
 			final String methodName) {
 		plug(object, methodName, -1, -1);
 	}
-	
+
 	/**
 	 * Register a callback method for all MIDI messages received on a specific channel on this input.
 	 * @param object Callback object
@@ -188,7 +222,7 @@ public class MidiInput implements Receiver {
 	public void plug(Object obj) {
 		plug(obj, -1);
 	}
-	
+
 	/**
 	 * Register an object with standard midi callbacks on a specific channels. The callbacks are noteOnReceived(Note),
 	 * noteOffReceived(Note), controllerChangeReceived(Controller), programChangeReceived(ProgramChange) and
