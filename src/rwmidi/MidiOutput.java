@@ -13,12 +13,19 @@ import javax.sound.midi.ShortMessage;
 public class MidiOutput {
 	Receiver receiver;
 	javax.sound.midi.MidiDevice device;
+	static final int MAXPITCHBEND = 16383;
+	static final int MINPITCHBEND = 0;
 	
 	MidiOutput(javax.sound.midi.MidiDevice device) throws MidiUnavailableException {
 		this.device = device;
-		device.open();
+		if (!device.isOpen())
+			device.open();
 		receiver = device.getReceiver();
 
+	}
+	
+	MidiOutput(Receiver _receiver) {
+		receiver = _receiver;
 	}
 
 	MidiOutput(MidiOutputDevice _device) throws MidiUnavailableException {
@@ -29,6 +36,7 @@ public class MidiOutput {
 		javax.sound.midi.MidiDevice.Info info = device.getDeviceInfo();
 		return info.getName() + " " + info.getVendor();
 	}
+	
 
 	/**
 	 * Send a NOTE ON message on this output.
@@ -81,6 +89,30 @@ public class MidiOutput {
 		ShortMessage msg = new ShortMessage();
 		try {
 			msg.setMessage(MidiEvent.CONTROL_CHANGE, channel, cc, value);
+			receiver.send(msg, -1);
+			return 1;
+		} catch (InvalidMidiDataException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return 0;
+		}
+	}
+	
+	/**
+	 * Send a Pitch Bend change message on this output.
+	 * @param channel Channel on which to send the message
+	 * @param value Pitch Bend value
+	 * @return 1 on success, 0 on error
+	 */
+	public int sendPitchBend(int channel, int value) {
+		if (value > MAXPITCHBEND) value = MAXPITCHBEND;
+		if (value < MINPITCHBEND) value = MINPITCHBEND;
+		byte lsb = (byte) (value % 128);
+		byte msb = (byte) (value/128);
+		
+		ShortMessage msg = new ShortMessage();
+		try {
+			msg.setMessage(MidiEvent.PITCH_BEND, channel, lsb, msb);
 			receiver.send(msg, -1);
 			return 1;
 		} catch (InvalidMidiDataException e) {

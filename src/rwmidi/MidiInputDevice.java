@@ -48,5 +48,11 @@ public class MidiInputDevice extends MidiDevice {
 		MidiInput input = createInput();
 		input.plug(obj, channel);
 		return input;
-	}	
+	}
+	
+	public MidiInput createInput(int convertTo) {
+		MidiInput input = createInput();
+		input.divisions = convertTo/24;
+		return input;
+	}
 }
